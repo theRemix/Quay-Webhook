@@ -80,13 +80,13 @@ func deploy(svc Service, ref string) {
 	fmt.Printf("[%s Executing Shell] %s\n", timestamp(), cmd)
 	out, err := exec.Command("/bin/sh", "-c", string(cmd)).CombinedOutput()
 	if err != nil {
-		fmt.Printf("[%s ERROR] %s\n", timestamp(), err)
+		fmt.Printf("[%s ERROR] [exec shell] %s\n", timestamp(), err)
 		return
 	}
 
-	fmt.Printf("[%s Executing Shell] %s\n", timestamp(), cmd)
+	fmt.Printf("[%s Shell Output (begin)]\n", timestamp())
 	fmt.Printf("%s\n", out)
-	fmt.Printf("[%s Executing Shell] %s\n", timestamp(), cmd)
+	fmt.Printf("[%s Shell Output (end)]\n", timestamp())
 }
 
 func main() {
@@ -125,12 +125,15 @@ func main() {
 		decoder := json.NewDecoder(r.Body)
 		var payload IncomingWebhook
 		err := decoder.Decode(&payload)
-		if err != nil {
-			fmt.Printf("[%s ERROR] %+v\n", timestamp(), err)
-		}
 
 		if os.Getenv("DEBUG") != "" {
 			fmt.Printf("[%s DEBUG PAYLOAD] %+v\n", timestamp(), payload)
+		}
+
+		if err != nil {
+			fmt.Printf("[%s ERROR] [decode payload] %+v\n", timestamp(), err)
+			fmt.Fprintf(w, "error")
+			return
 		}
 
 		for _, svc := range config.Services {
