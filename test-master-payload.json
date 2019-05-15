@@ -16,7 +16,7 @@
     "commit_info": {
       "url": "http://path/to/the/commit",
       "message": "Some commit message",
-      "date": 2395748365,
+      "date": "2019-05-14T17:00:01-07:00",
       "author": {
         "username": "fakeauthor",
         "url": "http://path/to/fake/author/in/scm",
