@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"regexp"
+	"time"
 )
 
 type IncomingWebhook struct {
@@ -56,8 +57,13 @@ type Config struct {
 	Services []Service `hcl:"service"`
 }
 
+func timestamp() string {
+	t := time.Now()
+	return t.Format("2006-01-02 15:04:05")
+}
+
 func deploy(svc Service, ref string) {
-	fmt.Printf("[Deploying] %s from %s\n", svc.Name, ref)
+	fmt.Printf("[%s Deploying] %s from %s\n", timestamp(), svc.Name, ref)
 
 	content := []byte(ref)
 
@@ -71,13 +77,16 @@ func deploy(svc Service, ref string) {
 		cmd = pattern.Expand(cmd, template, content, submatches)
 	}
 
-	fmt.Printf("[Executing Shell] %s\n", cmd)
+	fmt.Printf("[%s Executing Shell] %s\n", timestamp(), cmd)
 	out, err := exec.Command("/bin/sh", "-c", string(cmd)).CombinedOutput()
 	if err != nil {
-		fmt.Printf("[ERROR] %s\n", err)
+		fmt.Printf("[%s ERROR] %s\n", timestamp(), err)
 		return
 	}
+
+	fmt.Printf("[%s Executing Shell] %s\n", timestamp(), cmd)
 	fmt.Printf("%s\n", out)
+	fmt.Printf("[%s Executing Shell] %s\n", timestamp(), cmd)
 }
 
 func main() {
@@ -106,7 +115,7 @@ func main() {
 		log.Fatal(decodeErr)
 	}
 
-	fmt.Printf("[Config loaded] %s\n", configPath)
+	fmt.Printf("[%s Config loaded] %s\n", timestamp(), configPath)
 
 	http.HandleFunc("/healthz", func(w http.ResponseWriter, _r *http.Request) {
 		fmt.Fprintf(w, "ok")
@@ -117,11 +126,11 @@ func main() {
 		var payload IncomingWebhook
 		err := decoder.Decode(&payload)
 		if err != nil {
-			fmt.Printf("%+v\n", err)
+			fmt.Printf("[%s ERROR] %+v\n", timestamp(), err)
 		}
 
 		if os.Getenv("DEBUG") != "" {
-			fmt.Printf("[DEBUG PAYLOAD] %+v\n", payload)
+			fmt.Printf("[%s DEBUG PAYLOAD] %+v\n", timestamp(), payload)
 		}
 
 		for _, svc := range config.Services {
