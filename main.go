@@ -122,12 +122,30 @@ func main() {
 	})
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		decoder := json.NewDecoder(r.Body)
-		var payload IncomingWebhook
-		err := decoder.Decode(&payload)
+
+		body, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			fmt.Printf("[%s ERROR Read Req Body] %+v\n", timestamp(), err)
+			fmt.Fprintf(w, "error")
+			return
+		}
+
+		if len(body) == 0 {
+			fmt.Printf("[%s ERROR Empty Req Body] skipping\n", timestamp())
+			fmt.Fprintf(w, "error")
+			return
+		}
 
 		if os.Getenv("DEBUG") != "" {
-			fmt.Printf("[%s DEBUG PAYLOAD] %+v\n", timestamp(), payload)
+			fmt.Printf("[%s DEBUG Raw JSON Payload] %s\n", timestamp(), string(body))
+		}
+
+		var payload IncomingWebhook
+
+		err = json.Unmarshal(body, &payload)
+
+		if os.Getenv("DEBUG") != "" {
+			fmt.Printf("[%s DEBUG Decoded Payload] %+v\n", timestamp(), payload)
 		}
 
 		if err != nil {
@@ -136,11 +154,19 @@ func main() {
 			return
 		}
 
+		conditionsFound := 0
 		for _, svc := range config.Services {
+			if os.Getenv("DEBUG") != "" {
+				fmt.Printf("[%s Checking Condition] %+v\n", timestamp(), svc.Conditions)
+			}
 			re := regexp.MustCompile(svc.Conditions)
 			if svc.Repository == payload.Repository && len(re.Find([]byte(payload.TriggerMetadata.Ref))) != 0 {
+				conditionsFound++
 				deploy(svc, payload.TriggerMetadata.Ref)
 			}
+		}
+		if os.Getenv("DEBUG") != "" && conditionsFound == 0 {
+			fmt.Printf("[%s 0 Conditions Found]\n", timestamp())
 		}
 
 		fmt.Fprintf(w, "ok")
